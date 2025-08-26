@@ -11,6 +11,7 @@ import json
 import uvicorn
 
 from routers import spotify
+from routers import whoop
 
 app = FastAPI(title="FitPro Integration Backend")
 
@@ -27,7 +28,8 @@ app.add_middleware(
 async def root():
     return {"message": "FitPro Backend is running!", "version": "1.0.0"}
 
-app.include_router(spotify.spotify_router, tags=["spotify"])
+app.include_router(spotify.spotify_router, prefix="/spotify", tags=["spotify"])
+app.include_router(whoop.whoop_router, prefix="/whoop", tags=["whoop"])
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

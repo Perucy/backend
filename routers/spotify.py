@@ -39,7 +39,6 @@ def generate_code_challenge(verifier: str):
 async def initiate_spotify_login():
     """Start Spotify OAuth flow with PKCE"""
     # Generate PKCE parameters
-    print(SPOTIFY_CLIENT_ID, SPOTIFY_REDIRECT_URI)
     code_verifier = generate_code_verifier()
     code_challenge = generate_code_challenge(code_verifier)
     state = secrets.token_urlsafe(32)
