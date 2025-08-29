@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+print(f"Using DATABASE_URL: {DATABASE_URL}") 
 engine = create_async_engine(DATABASE_URL, pool_size=20, max_overflow=0,pool_pre_ping=True,echo=False)
 AsyncSessionLocal = async_sessionmaker(engine, class_=AsyncSession)
 
@@ -18,7 +19,7 @@ try:
     redis_client = redis.from_url(REDIS_URL)
 except Exception as e:
     print(f"Redis connection failed: {e}")
-    
+
     redis_client = None
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable must be set")

@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from databases.database import User, OAuthToken
+from .database import User, OAuthToken
 from cryptography.fernet import Fernet
 import os
 from datetime import datetime, timedelta
@@ -22,18 +22,35 @@ async def store_oauth_token(
     refresh_token: str = None,
     expires_in: int = None
 ):
+    print("store oauth token")
+    print("user id:", user_id)
+    print("provider:", provider)
+
     encrypted_access = fernet.encrypt(access_token.encode()).decode()
     encrypted_refresh = fernet.encrypt(refresh_token.encode()).decode() if refresh_token else None
 
     expires_at = datetime.utcnow() + timedelta(seconds=expires_in) if expires_in else None
 
-    result = await db.execute(
-        select(OAuthToken).where(
-            OAuthToken.user_id == user_id,
-            OAuthToken.provider_name == provider
-        )
-    )
+    print("encrypted access:", encrypted_access)
+    print("encrypted_refresh:", encrypted_refresh)
+    print("expires at", expires_at)
+    print("db", db)
 
+    try:
+        result = await db.execute(
+            select(OAuthToken).where(
+                OAuthToken.user_id == user_id,
+                OAuthToken.provider_name == provider
+            )
+        )
+        print("db results:", result)
+        existing_token = result.scalar_one_or_none()
+        print("existing_token:", existing_token)
+    except Exception as db_error:
+        print(f"Database query error: {db_error}")
+        raise
+    
+    print("db results:", result)
     existing_token = result.scalar_one_or_none()
 
     if existing_token:
@@ -53,6 +70,7 @@ async def store_oauth_token(
     await db.commit()
 
 async def get_oauth_token(db: AsyncSession, user_id: str, provider: str):
+    
     result = await db.execute(
         select(OAuthToken).where(
             OAuthToken.user_id == user_id,
@@ -60,6 +78,7 @@ async def get_oauth_token(db: AsyncSession, user_id: str, provider: str):
         )
     )
 
+    print("db results:", result)
     token = result.scalar_one_or_none()
 
     if not token:

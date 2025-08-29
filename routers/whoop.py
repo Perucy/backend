@@ -151,8 +151,11 @@ async def whoop_auth_callback(
         
         user_profile = profile_response.json()
         # Fixed: Whoop API returns 'user_id' not 'id'
-        # user_id = user_profile.get('user_id') or str(user_profile.get('id', secrets.token_hex(8)))
+        user_id = user_profile.get('user_id') or str(user_profile.get('id', secrets.token_hex(8)))
+        print(type(user_id))
         user_id = str(user_profile.get('user_id', user_profile.get('id')))
+        print("user id:", user_id)
+        print(type(user_id))
         
         # Store user tokens and profile
         # whoop_user_tokens[user_id] = {
@@ -171,6 +174,7 @@ async def whoop_auth_callback(
         )
         # Fixed: Use appropriate field for display name
         display_name = user_profile.get('first_name', user_profile.get('email', 'Whoop User'))
+        print("display name:", display_name)
         print(f"✅ OAuth successful for user: {display_name} ({user_id})")
         
         # Redirect to mobile app with success
@@ -199,13 +203,13 @@ async def get_whoop_user_access_token(user_id: int, db: AsyncSession = Depends(g
     # print("whoop user tokens:", whoop_user_tokens)  # Debugging line
     
     token_data = await get_oauth_token(db, user_id, 'whoop')
-    if token_data:
+    if not token_data:
         raise HTTPException(status_code=401, detail="User not authenticated")
     return token_data['access_token']
 
 async def make_whoop_request(user_id: str, endpoint: str, params: dict = None):
     """Make authenticated request to Whoop API"""  # Fixed: Updated comment
-    access_token = get_whoop_user_access_token(user_id)
+    access_token = await get_whoop_user_access_token(user_id)
 
     print("Access token:", access_token)  # Debugging line
     print("User ID:", user_id)  # Debugging line
