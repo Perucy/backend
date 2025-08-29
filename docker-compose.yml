@@ -13,7 +13,7 @@ services:
     ports:
       - "${POSTGRES_PORT}:5432"
     volumes:
-      - postgres_data:var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./init-db:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U fitpro_user -d ${POSTGRES_DB}"]
@@ -48,7 +48,7 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
-    
+
   redis-commander:
     image: rediscommander/redis-commander:latest
     container_name: fitpro-redis-commander
