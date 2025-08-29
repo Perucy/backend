@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from database import User, OAuthToken
+from databases.database import User, OAuthToken
 from cryptography.fernet import Fernet
 import os
 from datetime import datetime, timedelta
