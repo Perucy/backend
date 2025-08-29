@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 import requests
 import secrets
 import hashlib
@@ -8,6 +9,11 @@ import os
 from dotenv import load_dotenv
 from urllib.parse import urlencode
 from typing import Optional
+
+from databases.database import get_db, User
+from databases.db_service import store_oauth_token, get_oauth_token
+
+
 
 load_dotenv()
 
@@ -69,7 +75,8 @@ async def initiate_whoop_login():
 async def whoop_auth_callback(
     code: Optional[str] = None,
     state: Optional[str] = None, 
-    error: Optional[str] = None
+    error: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
 ):
      # Handle user cancellation first
     if error == "access_denied":
@@ -144,16 +151,24 @@ async def whoop_auth_callback(
         
         user_profile = profile_response.json()
         # Fixed: Whoop API returns 'user_id' not 'id'
-        user_id = user_profile.get('user_id') or str(user_profile.get('id', secrets.token_hex(8)))
+        # user_id = user_profile.get('user_id') or str(user_profile.get('id', secrets.token_hex(8)))
+        user_id = str(user_profile.get('user_id', user_profile.get('id')))
         
         # Store user tokens and profile
-        whoop_user_tokens[user_id] = {
-            'access_token': access_token,
-            'refresh_token': token_info.get('refresh_token'),
-            'expires_in': token_info.get('expires_in'),
-            'profile': user_profile
-        }
-        
+        # whoop_user_tokens[user_id] = {
+        #     'access_token': access_token,
+        #     'refresh_token': token_info.get('refresh_token'),
+        #     'expires_in': token_info.get('expires_in'),
+        #     'profile': user_profile
+        # }
+        await store_oauth_token(
+            db=db,
+            user_id=user_id,
+            provider='whoop',
+            access_token=access_token,
+            refresh_token=token_info.get('refresh_token'),
+            expires_in=token_info.get('expires_in')
+        )
         # Fixed: Use appropriate field for display name
         display_name = user_profile.get('first_name', user_profile.get('email', 'Whoop User'))
         print(f"✅ OAuth successful for user: {display_name} ({user_id})")
@@ -173,19 +188,20 @@ async def whoop_auth_callback(
         error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
         return RedirectResponse(url=error_url)
     
-def get_whoop_user_access_token(user_id: int) -> str:
+async def get_whoop_user_access_token(user_id: int, db: AsyncSession = Depends(get_db)) -> str:
     """Get access token for user"""
-    print(f"Looking for user_id: {user_id} (type: {type(user_id)})")
-    print(f"Available keys: {list(whoop_user_tokens.keys())} (types: {[type(k) for k in whoop_user_tokens.keys()]})")
+    # print(f"Looking for user_id: {user_id} (type: {type(user_id)})")
+    # print(f"Available keys: {list(whoop_user_tokens.keys())} (types: {[type(k) for k in whoop_user_tokens.keys()]})")
     
     # Convert user_id to string to ensure consistent lookup
     # user_id_str = str(user_id)
 
-    print("whoop user tokens:", whoop_user_tokens)  # Debugging line
+    # print("whoop user tokens:", whoop_user_tokens)  # Debugging line
     
-    if user_id not in whoop_user_tokens:
+    token_data = await get_oauth_token(db, user_id, 'whoop')
+    if token_data:
         raise HTTPException(status_code=401, detail="User not authenticated")
-    return whoop_user_tokens[user_id]['access_token']
+    return token_data['access_token']
 
 async def make_whoop_request(user_id: str, endpoint: str, params: dict = None):
     """Make authenticated request to Whoop API"""  # Fixed: Updated comment
