@@ -1,4 +1,5 @@
 import os
+import uuid
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy import Column, String, DateTime, Text, UUID, Boolean, ForeignKey
@@ -19,7 +20,6 @@ try:
     redis_client = redis.from_url(REDIS_URL)
 except Exception as e:
     print(f"Redis connection failed: {e}")
-
     redis_client = None
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL environment variable must be set")
@@ -28,20 +28,35 @@ if not REDIS_URL:
 class Base(DeclarativeBase):
     pass
 
+# fitpro app users
 class User(Base):
     __tablename__ = "users"
 
-    user_id = Column(UUID, primary_key=True, server_default=func.gen_random_uuid())
+    #fitpro's internal user id
+    user_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+
+    # fitpro's users info
     email = Column(String(256), unique=True, nullable=False)
     username = Column(String(50), unique=True)
+    first_name = Column(String(100), nullable=True)
+    last_name = Column(String(100), nullable=True)
+    
+    # ids for linked accounts
+    whoop_user_id = Column(String(255), unique=True, nullable=True)
+    spotify_user_id = Column(String(255), unique=True, nullable=True)
+
+    # app metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     is_active = Column(Boolean, default=True)
+    
+
 
 class OAuthToken(Base):
     __tablename__ = "oauth_tokens"
 
     token_id = Column(UUID, primary_key=True, server_default=func.gen_random_uuid())
-    user_id = Column(UUID, ForeignKey("users.user_id"), nullable=False)
+    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
     provider_name = Column(String(50), nullable=False)
     access_token_encrypted = Column(Text, nullable=False)
     refresh_token_encrypted = Column(Text)
