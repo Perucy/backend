@@ -43,3 +43,5 @@ async def login(token_request: RefreshTokenRequest, db: AsyncSession = Depends(g
         return result
     except ValueError as e:
         raise HTTPException(status_code=401, detail=str(e))
+    
+__all__ = ["router", "get_authenticated_user"]
