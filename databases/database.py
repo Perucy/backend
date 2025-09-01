@@ -40,6 +40,7 @@ class User(Base):
     username = Column(String(50), unique=True)
     first_name = Column(String(100), nullable=True)
     last_name = Column(String(100), nullable=True)
+    password_hash = Column(Text, nullable=False)
     
     # ids for linked accounts
     whoop_user_id = Column(String(255), unique=True, nullable=True)
@@ -55,15 +56,22 @@ class User(Base):
 class OAuthToken(Base):
     __tablename__ = "oauth_tokens"
 
-    token_id = Column(UUID, primary_key=True, server_default=func.gen_random_uuid())
-    user_id = Column(String(255), ForeignKey("users.user_id"), nullable=False)
+    token_id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String(36), ForeignKey("users.user_id"), nullable=False)
     provider_name = Column(String(50), nullable=False)
+
+    # encrypted token data
     access_token_encrypted = Column(Text, nullable=False)
-    refresh_token_encrypted = Column(Text)
+    refresh_token_encrypted = Column(Text, nullable=True)
     expires_at = Column(DateTime(timezone=True))
+
+    # token metadata
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-
+    __table_args__ = (
+        {"schema": None},
+    )
 async def get_db():
     async with AsyncSessionLocal() as session:
         try:
