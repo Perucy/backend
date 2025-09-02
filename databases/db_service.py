@@ -1,11 +1,13 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .database import User, OAuthToken
+from dotenv import load_dotenv
 from cryptography.fernet import Fernet
+from datetime import datetime, timedelta
+
 import os
 import uuid
-from datetime import datetime, timedelta
-from dotenv import load_dotenv
+
+from .database import User, OAuthToken
 
 load_dotenv()
 

@@ -23,7 +23,6 @@ CREATE TABLE users (
     -- OAuth provider user IDs
     whoop_user_id VARCHAR(255) UNIQUE,
     spotify_user_id VARCHAR(255) UNIQUE,
-    fitbit_user_id VARCHAR(255) UNIQUE,
     
     -- App metadata
     created_at TIMESTAMPTZ DEFAULT NOW(),
