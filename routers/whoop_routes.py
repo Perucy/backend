@@ -13,7 +13,7 @@ from typing import Optional
 from databases.database import get_db, User
 from databases.db_service import store_oauth_token, get_oauth_token
 from integrations.whoop import WhoopIntegration
-from auth_routes import get_authenticated_user
+from .auth_routes import get_authenticated_user
 
 
 
