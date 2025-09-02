@@ -1,4 +1,3 @@
-from FitPro.backend.routers import spotify_routes, whoop_routes
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
@@ -12,8 +11,9 @@ import json
 import uvicorn
 
 from databases.database import engine, Base
-from routers import auth_routes
-
+from routers.auth_routes import router
+from routers.whoop_routes import whoop_router
+from routers.spotify_routes import spotify_router
 
 app = FastAPI(
     title="FitPro API", 
@@ -30,9 +30,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(spotify_routes.spotify_router, prefix="/spotify", tags=["spotify"])
-app.include_router(whoop_routes.whoop_router, prefix="/whoop", tags=["whoop"])
-app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
+app.include_router(spotify_router, prefix="/spotify", tags=["spotify"])
+app.include_router(whoop_router, prefix="/whoop", tags=["whoop"])
+app.include_router(router, prefix="/auth", tags=["Authentication"])
 
 @app.on_event("startup")
 async def create_tables():
