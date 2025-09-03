@@ -78,7 +78,14 @@ def verify_password(password: str, hashed_password: str) -> bool:
 # ================================================================================================
 # AUTHENTICATION FUNCTIONS
 # ================================================================================================
-async def register_user(db: AsyncSession, email: str, password: str, first_name: str, last_name: str, user_name: str):
+async def register_user(
+    db: AsyncSession, 
+    email: str, 
+    password: str, 
+    first_name: Optional[str] = None, 
+    last_name: Optional[str] = None, 
+    user_name: Optional[str] = None
+):
     # check if user already exists
     existing_user = await get_user_by_email(db, email)
     if existing_user:
@@ -90,7 +97,7 @@ async def register_user(db: AsyncSession, email: str, password: str, first_name:
     user_data = {
         'user_id':user_id,
         'email':email,
-        'username':user_name,
+        'username':user_name or f"user_{user_id[:8]}",
         'first_name':first_name,
         'last_name':last_name,
         'password_hash':hashed_pwd
@@ -102,6 +109,18 @@ async def register_user(db: AsyncSession, email: str, password: str, first_name:
         "user_id": user.user_id,
         "email": user.email
     })
+
+    return {
+        'user_id':user.user_id,
+        'email':user.email,
+        'username':user.username,
+        'first_name':first_name,
+        'last_name':last_name,
+        "access_token": tokens["access_token"],
+        "refresh_token": tokens["refresh_token"],
+        "expires_in": tokens["expires_in"],
+        "token_type": "bearer"
+    }
 
 async def login_user(db: AsyncSession, email: str, password: str) -> dict:
     user = await get_user_by_email(db, email)

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
+from typing import Optional, Dict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from databases.database import get_db
@@ -17,9 +18,9 @@ security = HTTPBearer()
 class UserRegistration(BaseModel):
     email: str
     password: str
-    username: str
-    first_name: str
-    last_name: str
+    username: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: str
@@ -34,7 +35,7 @@ async def register(user_data: UserRegistration, db: AsyncSession = Depends(get_d
         result = await register_user(db, user_data.email, user_data.password, user_data.first_name, user_data.last_name, user_data.username)
         return result
     except ValueError as e:
-        raise HTTPException
+        raise HTTPException(status_code=400, detail=str(e))
     
 @router.post("/login")
 async def login(login_data: UserLogin, db: AsyncSession = Depends(get_db)):
