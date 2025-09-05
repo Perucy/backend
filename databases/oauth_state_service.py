@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
@@ -17,7 +17,7 @@ class OAuthStateService:
         expires_in_minutes: int = 10
     ) -> bool:
         try:
-            expires_at = datetime.utcnow() + timedelta(minutes=expires_in_minutes)
+            expires_at = datetime.now(timezone.utc) + timedelta(minutes=expires_in_minutes)
             
             oauth_state = OAuthState(
                 state=state,
@@ -50,12 +50,14 @@ class OAuthStateService:
                 )
             )
             oauth_state = result.scalar_one_or_none()
+            print("🔗oauth state:", oauth_state)
             
             if not oauth_state:
                 return None
             
+            current_time = datetime.now(timezone.utc)
             # Check if expired
-            if datetime.utcnow() > oauth_state.expires_at:
+            if current_time > oauth_state.expires_at:
                 # Delete expired state
                 await db.execute(
                     delete(OAuthState).where(OAuthState.state == state)
