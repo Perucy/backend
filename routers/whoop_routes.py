@@ -31,7 +31,7 @@ async def initiate_whoop_login(
     Requires JWT token to identify which FitPro user is linking
     """
     try:
-        oauth_data = await WhoopIntegration.initiate_oauth(db, current_user.user_id)
+        oauth_data = await WhoopIntegration.initiate_whoop_oauth(db, current_user.user_id)
         return oauth_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to initiate Whoop OAuth: {str(e)}")
@@ -51,7 +51,8 @@ async def whoop_auth_callback(
         result = await WhoopIntegration.handle_oauth_callback(db, code, state, error)
         
         # Always redirect to mobile app
-        return RedirectResponse(url=result["redirect_url"])
+        # return RedirectResponse(url=result["redirect_url"])
+        return result
         
     except Exception as e:
         print(f"❌ Unexpected error in OAuth callback: {str(e)}")
