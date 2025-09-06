@@ -58,3 +58,17 @@ async def whoop_auth_callback(
         print(f"❌ Unexpected error in OAuth callback: {str(e)}")
         error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
         return RedirectResponse(url=error_url)
+    
+@whoop_router.get("/profile")
+async def whoop_user_profile(
+    db: AsyncSession = Depends(get_db), 
+    current_user = Depends(get_authenticated_user)
+):
+    try:
+        result = await WhoopIntegration.get_user_profile(db, current_user.user_id)
+
+        return result
+    except Exception as e:
+        print(f"❌ Unexpected error in OAuth callback: {str(e)}")
+        error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
+        return RedirectResponse(url=error_url)
