@@ -1,4 +1,8 @@
 Command to connect to the postgresql database fitpro_db and execute sql in file db.sql
 -- psql -h 127.0.0.1 -p 5432 -U fitpro_user -d fitpro_db -f db.sql
+
 Command to connect to the postgresql database fitpro_db
 -- psql -h 127.0.0.1 -p 5432 -U fitpro_user -d fitpro_db
+
+Start the podtgres and redis containers
+-- docker-compose up -d
