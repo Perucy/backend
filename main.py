@@ -32,7 +32,7 @@ app.add_middleware(
 
 app.include_router(spotify_router, prefix="/spotify", tags=["spotify"])
 app.include_router(whoop_router, prefix="/whoop", tags=["whoop"])
-app.include_router(router, prefix="/auth", tags=["Authentication"])
+app.include_router(router, prefix="/app", tags=["Authentication"])
 
 @app.on_event("startup")
 async def create_tables():
