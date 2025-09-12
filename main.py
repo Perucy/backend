@@ -11,7 +11,7 @@ import json
 import uvicorn
 
 from databases.database import engine, Base
-from routers.auth_routes import router
+from routers.app_routes import router
 from routers.whoop_routes import whoop_router
 from routers.spotify_routes import spotify_router
 
@@ -32,7 +32,7 @@ app.add_middleware(
 
 app.include_router(spotify_router, prefix="/spotify", tags=["spotify"])
 app.include_router(whoop_router, prefix="/whoop", tags=["whoop"])
-app.include_router(router, prefix="/app", tags=["Authentication"])
+app.include_router(router, prefix="/app", tags=["app"])
 
 @app.on_event("startup")
 async def create_tables():
@@ -47,7 +47,7 @@ async def root():
         "message": "FitPro API is running",
         "version": "1.0.0",
         "endpoints": {
-            "auth": "/auth/login, /auth/register, /auth/refresh",
+            "app": "/app/login, /app/register, /app/refresh",
             "whoop": "/whoop/auth/login, /whoop/auth/callback",
             "spotify": "/spotify/auth/login, /spotify/auth/callback",
         }
