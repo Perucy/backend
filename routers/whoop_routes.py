@@ -58,7 +58,29 @@ async def whoop_auth_callback(
         print(f"❌ Unexpected error in OAuth callback: {str(e)}")
         error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
         return RedirectResponse(url=error_url)
-    
+
+@whoop_router.get("/status")
+async def get_whoop_connection_status(
+    current_user = Depends(get_authenticated_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Check if user has Whoop connected and get basic info"""
+    try:
+        # Check if user has Whoop linked
+        if not current_user.whoop_user_id:
+            return {
+                "connected": False,
+                "message": "Whoop account not linked"
+            }
+        
+        return {
+            "connected": True,
+            "whoop_user_id": current_user.whoop_user_id,
+            "message": "Whoop account linked"
+        }
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to check status: {str(e)}")
 @whoop_router.get("/profile")
 async def whoop_user_profile(
     db: AsyncSession = Depends(get_db), 
