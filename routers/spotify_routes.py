@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import RedirectResponse
+from sqlalchemy.ext.asyncio import AsyncSession
 import requests
 import secrets
 import hashlib
@@ -9,64 +10,27 @@ from dotenv import load_dotenv
 from urllib.parse import urlencode
 from typing import Optional
 
+
+from databases.database import get_db, User
+from databases.db_service import store_oauth_token, get_oauth_token
+from integrations.spotify import SpotifyIntegration
+from .app_routes import get_authenticated_user
+
 load_dotenv()
 
 spotify_router = APIRouter()
 
-# Spotify config
-SPOTIFY_CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
-SPOTIFY_CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
-
-# Spotify API URLs
-SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
-SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
-SPOTIFY_API_BASE = "https://api.spotify.com/v1"
-
-user_tokens = {}
-auth_states = {}
-
-def generate_code_verifier():
-    """Generate PKCE code verifier"""
-    return base64.urlsafe_b64encode(secrets.token_bytes(32)).decode('utf-8').rstrip('=')
-
-def generate_code_challenge(verifier: str):
-    """Generate PKCE code challenge"""
-    digest = hashlib.sha256(verifier.encode('utf-8')).digest()
-    return base64.urlsafe_b64encode(digest).decode('utf-8').rstrip('=')
-
 @spotify_router.get("/auth/login")
-async def initiate_spotify_login():
-    """Start Spotify OAuth flow with PKCE"""
-    # Generate PKCE parameters
-    code_verifier = generate_code_verifier()
-    code_challenge = generate_code_challenge(code_verifier)
-    state = secrets.token_urlsafe(32)
-    
-    # Store for later verification
-    auth_states[state] = {
-        'code_verifier': code_verifier,
-        'created_at': secrets.token_hex(16)  # Simple timestamp substitute
-    }
-    
-    # Build authorization URL
-    auth_params = {
-        'client_id': SPOTIFY_CLIENT_ID,
-        'response_type': 'code',
-        'redirect_uri': SPOTIFY_REDIRECT_URI,
-        'scope': 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-library-read user-top-read',
-        'code_challenge': code_challenge,
-        'code_challenge_method': 'S256',
-        'state': state,
-        'show_dialog': 'true'  # Always show login dialog
-    }
-    
-    auth_url = f"{SPOTIFY_AUTH_URL}?{urlencode(auth_params)}"
-    
-    return {
-        "auth_url": auth_url,
-        "state": state
-    }
+async def initiate_spotify_login(
+    current_user = Depends(get_authenticated_user),
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        oauth_data = await SpotifyIntegration.initiate_spotify_oauth(db, current_user.user_id)
+        return oauth_data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to initiate Spotify OAuth: {str(e)}")
+      
 
 @spotify_router.get("/auth/callback")
 async def spotify_callback(
