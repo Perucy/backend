@@ -48,7 +48,7 @@ async def whoop_auth_callback(
     Redirects to mobile app with success/error status
     """
     try:
-        result = await WhoopIntegration.handle_oauth_callback(db, code, state, error)
+        result = await WhoopIntegration.whoop_callback(db, code, state, error)
         
         # Always redirect to mobile app
         # return RedirectResponse(url=result["redirect_url"])
