@@ -75,7 +75,7 @@ class WhoopIntegration:
         }
     
     @staticmethod
-    async def handle_oauth_callback(db: AsyncSession, code: str, state: str, error: Optional[str] = None) -> Dict[str, Any]:
+    async def whoop_callback(db: AsyncSession, code: str, state: str, error: Optional[str] = None) -> Dict[str, Any]:
         print("👍 Code:", code)
         print("👌🏾 State:", state)
         if error == "access_denied":
