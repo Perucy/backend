@@ -77,10 +77,10 @@ async def get_whoop_connection_status(
             "connected": True,
             "whoop_user_id": current_user.whoop_user_id,
             "message": "Whoop account linked"
-        }
-            
+        }    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to check status: {str(e)}")
+    
 @whoop_router.get("/profile")
 async def whoop_user_profile(
     db: AsyncSession = Depends(get_db), 
