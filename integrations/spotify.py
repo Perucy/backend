@@ -24,7 +24,7 @@ SPOTIFY_REDIRECT_URI = os.getenv("SPOTIFY_REDIRECT_URI")
 # Spotify API URLs
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
-SPOTIFY_API_BASE = "https://api.spotify.com/v1"
+SPOTIFY_API_BASE_URL = "https://api.spotify.com/v1"
 
 class SpotifyIntegration:
     @staticmethod
@@ -164,7 +164,7 @@ class SpotifyIntegration:
             # Get user profile
             print(f"🔄 Fetching user profile...")
             profile_response = requests.get(
-                f"{SPOTIFY_API_BASE}/me",
+                f"{SPOTIFY_API_BASE_URL}/me",
                 headers={'Authorization': f"Bearer {access_token}"}
             )
             
@@ -219,3 +219,50 @@ class SpotifyIntegration:
                 "error": "unexpected_error",
                 "redirect_url": "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
             }
+        
+    @staticmethod
+    async def make_spotify_api_request(db: AsyncSession, fitpro_user_id: str, endpoint: str, params: dict = None) -> Optional[Dict[str, Any]]:
+        """
+        Make authenticated request to Spotify API
+        
+        Args:
+            fitpro_user_id: FitPro user ID (not Spotify user ID)
+            endpoint: API endpoint (e.g., "user/profile/basic")
+            params: Query parameters
+        """
+        # Get stored OAuth token
+        token_data = await get_oauth_token(db, fitpro_user_id, 'Spotify')
+        if not token_data:
+            raise ValueError("User not authenticated with Spotify")
+        
+        headers = {
+            'Authorization': f"Bearer {token_data['access_token']}",
+            'Content-Type': 'application/json'
+        }
+        
+        url = f"{SPOTIFY_API_BASE_URL}/{endpoint.lstrip('/')}"
+        
+        try:
+            response = requests.get(url, headers=headers, params=params)
+            
+            if response.status_code == 401:
+                raise ValueError("Access token expired. Please re-authenticate.")
+            
+            if response.status_code != 200:
+                raise ValueError(f"Spotify API error: {response.text}")
+            
+            return response.json()
+            
+        except requests.RequestException as e:
+            raise ValueError(f"Failed to connect to Spotify: {str(e)}")
+
+    @staticmethod   
+    async def get_user_profile(user_id: str):
+        """Get user's Spotify profile"""
+        return await SpotifyIntegration.make_spotify_api_request(user_id, "/me")
+
+    @staticmethod
+    async def get_user_playlists(user_id: str, limit: int = 20, offset: int = 0):
+        """Get user's playlists"""
+        params = {'limit': limit, 'offset': offset}
+        return await SpotifyIntegration.make_spotify_api_request(user_id, "/me/playlists", params)
