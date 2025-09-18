@@ -70,7 +70,7 @@ async def get_spotify_connection_status(
         
         return {
             "connected": True,
-            "whoop_user_id": current_user.spotify_user_id,
+            "spotify_user_id": current_user.spotify_user_id,
             "message": "Spotify account linked"
         }    
     except Exception as e:
