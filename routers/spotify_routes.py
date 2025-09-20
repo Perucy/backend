@@ -89,6 +89,19 @@ async def whoop_user_profile(
         print(f"❌ Unexpected error in OAuth callback: {str(e)}")
         error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
         return RedirectResponse(url=error_url)
+    
+@spotify_router.get("/playlist")
+async def spotify_user_playlist(
+    db: AsyncSession = Depends(get_db), 
+    current_user = Depends(get_authenticated_user)
+):
+    try:
+        result = await SpotifyIntegration.get_user_playlists(db, current_user.user_id)
+        return result
+    except Exception as e:
+        print(f"❌ Unexpected error in OAuth callback: {str(e)}")
+        error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
+        return RedirectResponse(url=error_url)
 
 # @spotify_router.get("/api/user/{user_id}/profile")
 # async def get_user_profile(user_id: str):
