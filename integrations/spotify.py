@@ -219,19 +219,44 @@ class SpotifyIntegration:
                 "error": "unexpected_error",
                 "redirect_url": "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
             }
+
+    @staticmethod
+    async def refresh_spotify_token(db: AsyncSession, fitpro_user_id: str) -> bool:
+        """Refresh expired Spotify access token"""
+        token_data = await get_oauth_token(db, fitpro_user_id, 'spotify')
+        if not token_data or not token_data.get('refresh_token'):
+            return False
         
+        refresh_data = {
+            'grant_type': 'refresh_token',
+            'refresh_token': token_data['refresh_token'],
+            'client_id': SPOTIFY_CLIENT_ID
+        }
+        
+        try:
+            response = requests.post(SPOTIFY_TOKEN_URL, data=refresh_data)
+            if response.status_code == 200:
+                new_token_info = response.json()
+                
+                # Update stored token
+                await store_oauth_token(
+                    db=db,
+                    user_id=fitpro_user_id,
+                    provider='spotify',
+                    access_token=new_token_info['access_token'],
+                    refresh_token=new_token_info.get('refresh_token', token_data['refresh_token']),
+                    expires_in=new_token_info.get('expires_in')
+                )
+                return True
+        except Exception as e:
+            print(f"Token refresh failed: {e}")
+        
+        return False  
+    
     @staticmethod
     async def make_spotify_api_request(db: AsyncSession, fitpro_user_id: str, endpoint: str, params: dict = None) -> Optional[Dict[str, Any]]:
-        """
-        Make authenticated request to Spotify API
-        
-        Args:
-            fitpro_user_id: FitPro user ID (not Spotify user ID)
-            endpoint: API endpoint (e.g., "user/profile/basic")
-            params: Query parameters
-        """
-        # Get stored OAuth token
-        token_data = await get_oauth_token(db, fitpro_user_id, 'Spotify')
+        """Make authenticated request to Spotify API with token refresh"""
+        token_data = await get_oauth_token(db, fitpro_user_id, 'spotify')
         if not token_data:
             raise ValueError("User not authenticated with Spotify")
         
@@ -245,8 +270,16 @@ class SpotifyIntegration:
         try:
             response = requests.get(url, headers=headers, params=params)
             
+            # If token expired, try to refresh
             if response.status_code == 401:
-                raise ValueError("Access token expired. Please re-authenticate.")
+                print("Token expired, attempting refresh...")
+                if await SpotifyIntegration.refresh_spotify_token(db, fitpro_user_id):
+                    # Retry with new token
+                    token_data = await get_oauth_token(db, fitpro_user_id, 'spotify')
+                    headers['Authorization'] = f"Bearer {token_data['access_token']}"
+                    response = requests.get(url, headers=headers, params=params)
+                else:
+                    raise ValueError("Access token expired and refresh failed. Please re-authenticate.")
             
             if response.status_code != 200:
                 raise ValueError(f"Spotify API error: {response.text}")
@@ -257,12 +290,17 @@ class SpotifyIntegration:
             raise ValueError(f"Failed to connect to Spotify: {str(e)}")
 
     @staticmethod   
-    async def get_user_profile(user_id: str):
+    async def get_user_profile(db: AsyncSession, user_id: str):
         """Get user's Spotify profile"""
-        return await SpotifyIntegration.make_spotify_api_request(user_id, "/me")
+        return await SpotifyIntegration.make_spotify_api_request(db, user_id, "/me")
 
     @staticmethod
-    async def get_user_playlists(user_id: str, limit: int = 20, offset: int = 0):
+    async def get_user_playlists(db: AsyncSession, user_id: str, limit: int = 20, offset: int = 0):
         """Get user's playlists"""
         params = {'limit': limit, 'offset': offset}
-        return await SpotifyIntegration.make_spotify_api_request(user_id, "/me/playlists", params)
+        return await SpotifyIntegration.make_spotify_api_request(db, user_id, "/me/playlists", params)
+    
+    @staticmethod
+    async def get_currently_playing(db: AsyncSession, user_id: str):
+        """Get user's currently playing track"""
+        return await SpotifyIntegration.make_spotify_api_request(db, user_id, "/me/player/currently-playing")
