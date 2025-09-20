@@ -77,7 +77,7 @@ async def get_spotify_connection_status(
         raise HTTPException(status_code=500, detail=f"Failed to check status: {str(e)}")
 
 @spotify_router.get("/profile")
-async def whoop_user_profile(
+async def spotify_user_profile(
     db: AsyncSession = Depends(get_db), 
     current_user = Depends(get_authenticated_user)
 ):
@@ -103,6 +103,16 @@ async def spotify_user_playlist(
         error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
         return RedirectResponse(url=error_url)
 
+@spotify_router.get("/currently-playing")
+async def spotify_currently_playing(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_authenticated_user)
+):
+    try:
+        result = await SpotifyIntegration.get_currently_playing(db, current_user.user_id)
+        return result or {"message": "No track currently playing"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get currently playing: {str(e)}")
 # @spotify_router.get("/api/user/{user_id}/profile")
 # async def get_user_profile(user_id: str):
 #     """Get user's Spotify profile"""
