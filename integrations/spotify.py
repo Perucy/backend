@@ -60,7 +60,7 @@ class SpotifyIntegration:
             'client_id': SPOTIFY_CLIENT_ID,
             'response_type': 'code',
             'redirect_uri': SPOTIFY_REDIRECT_URI,
-            'scope': 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-library-read user-top-read',
+            'scope': 'user-read-private user-read-email playlist-read-private playlist-read-collaborative user-library-read user-top-read user-read-recently-played',
             'code_challenge': code_challenge,
             'code_challenge_method': 'S256',
             'state': state,  # Fixed: Added missing state parameter
@@ -295,10 +295,10 @@ class SpotifyIntegration:
         return await SpotifyIntegration.make_spotify_api_request(db, user_id, "/me")
 
     @staticmethod
-    async def get_user_playlists(db: AsyncSession, user_id: str, limit: int = 20, offset: int = 0):
+    async def get_recently_played(db: AsyncSession, user_id: str, limit: int = 20, offset: int = 0):
         """Get user's playlists"""
         params = {'limit': limit, 'offset': offset}
-        return await SpotifyIntegration.make_spotify_api_request(db, user_id, "/me/playlists", params)
+        return await SpotifyIntegration.make_spotify_api_request(db, user_id, "/me/player/recently-played", params)
     
     @staticmethod
     async def get_currently_playing(db: AsyncSession, user_id: str):
