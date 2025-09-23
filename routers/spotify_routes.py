@@ -90,18 +90,16 @@ async def spotify_user_profile(
         error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
         return RedirectResponse(url=error_url)
     
-@spotify_router.get("/playlist")
-async def spotify_user_playlist(
-    db: AsyncSession = Depends(get_db), 
+@spotify_router.get("/recently-played")
+async def spotify_recently_played(
+    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_authenticated_user)
 ):
     try:
-        result = await SpotifyIntegration.get_user_playlists(db, current_user.user_id)
+        result = await SpotifyIntegration.get_recently_played(db, current_user.user_id, limit=20)
         return result
     except Exception as e:
-        print(f"❌ Unexpected error in OAuth callback: {str(e)}")
-        error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
-        return RedirectResponse(url=error_url)
+        raise HTTPException(status_code=500, detail=f"Failed to get recently played: {str(e)}")
 
 @spotify_router.get("/currently-playing")
 async def spotify_currently_playing(
