@@ -94,3 +94,36 @@ async def whoop_user_profile(
         print(f"❌ Unexpected error in OAuth callback: {str(e)}")
         error_url = "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
         return RedirectResponse(url=error_url)
+    
+@whoop_router.get("/recovery")
+async def get_whoop_recovery(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_authenticated_user)
+):
+    try:
+        result = await WhoopIntegration.get_recovery_data(db, current_user.user_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get recovery data: {str(e)}")
+
+@whoop_router.get("/workouts")
+async def get_whoop_workouts(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_authenticated_user)
+):
+    try:
+        result = await WhoopIntegration.get_workout_data(db, current_user.user_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get workout data: {str(e)}")
+
+@whoop_router.get("/sleep")
+async def get_whoop_sleep(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_authenticated_user)
+):
+    try:
+        result = await WhoopIntegration.get_sleep_data(db, current_user.user_id)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get sleep data: {str(e)}")
