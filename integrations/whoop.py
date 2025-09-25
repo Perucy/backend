@@ -195,18 +195,40 @@ class WhoopIntegration:
                 "error": "unexpected_error",
                 "redirect_url": "fitpro://callback?error=unexpected_error&message=Unexpected error occurred"
             }
-
+    @staticmethod
+    async def refresh_whoop_token(db: AsyncSession, fitpro_user_id: str) -> bool:
+        """Refresh expired Whoop access token"""
+        token_data = await get_oauth_token(db, fitpro_user_id, 'whoop')
+        if not token_data or not token_data.get('refresh_token'):
+            return False
+        
+        refresh_data = {
+            'grant_type': 'refresh_token',
+            'refresh_token': token_data['refresh_token'],
+            'client_id': WHOOP_CLIENT_ID,
+            'client_secret': WHOOP_CLIENT_SECRET
+        }
+        
+        try:
+            response = requests.post(WHOOP_TOKEN_URL, data=refresh_data)
+            if response.status_code == 200:
+                new_token_info = response.json()
+                
+                await store_oauth_token(
+                    db=db,
+                    user_id=fitpro_user_id,
+                    provider='whoop',
+                    access_token=new_token_info['access_token'],
+                    refresh_token=new_token_info.get('refresh_token', token_data['refresh_token']),
+                    expires_in=new_token_info.get('expires_in')
+                )
+                return True
+        except Exception as e:
+            print(f"Whoop token refresh failed: {e}")
+        
+        return False
     @staticmethod
     async def make_api_request(db: AsyncSession, fitpro_user_id: str, endpoint: str, params: dict = None) -> Optional[Dict[str, Any]]:
-        """
-        Make authenticated request to Whoop API
-        
-        Args:
-            fitpro_user_id: FitPro user ID (not Whoop user ID)
-            endpoint: API endpoint (e.g., "user/profile/basic")
-            params: Query parameters
-        """
-        # Get stored OAuth token
         token_data = await get_oauth_token(db, fitpro_user_id, 'whoop')
         if not token_data:
             raise ValueError("User not authenticated with Whoop")
@@ -221,8 +243,15 @@ class WhoopIntegration:
         try:
             response = requests.get(url, headers=headers, params=params)
             
+            # Add token refresh logic
             if response.status_code == 401:
-                raise ValueError("Access token expired. Please re-authenticate.")
+                print("Whoop token expired, attempting refresh...")
+                if await WhoopIntegration.refresh_whoop_token(db, fitpro_user_id):
+                    token_data = await get_oauth_token(db, fitpro_user_id, 'whoop')
+                    headers['Authorization'] = f"Bearer {token_data['access_token']}"
+                    response = requests.get(url, headers=headers, params=params)
+                else:
+                    raise ValueError("Access token expired and refresh failed. Please re-authenticate.")
             
             if response.status_code != 200:
                 raise ValueError(f"Whoop API error: {response.text}")
